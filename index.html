@@ -89,6 +89,12 @@ td.l,th.l{text-align:left}
 .toast.bad{border-color:var(--red)}.toast.good{border-color:var(--green)}.toast.warn{border-color:var(--amber)}
 .hint{font-size:12px;color:var(--muted);line-height:1.6}
 code{background:var(--panel2);padding:1px 5px;border-radius:4px}
+.cnt{display:inline-block;min-width:20px;padding:1px 6px;border-radius:999px;background:var(--amber);color:#1b1b1b;font-size:11px;font-weight:800;text-align:center}
+.cart td input[type=text]{min-width:140px;text-align:right}
+.cart tr.bad td{background:rgba(239,68,68,.06)}
+.cart tr.off td{opacity:.6}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px}
+.sum div{background:var(--panel2);border-radius:8px;padding:10px 12px}.sum small{display:block;color:var(--muted);margin-bottom:4px}.sum b{font-size:17px}
 @media (max-width:900px){.app{flex-direction:column}aside{width:auto;border-radius:0}.grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}.top .nav{display:none}main{padding:16px}.demo{width:calc(100% - 32px)}}
 </style>
 </head>
@@ -104,7 +110,7 @@ code{background:var(--panel2);padding:1px 5px;border-radius:4px}
   <main>
     <div class="top">
       <div class="nav"><span>Portal</span><span class="cur">Cargo Mgmt.</span><span>Passenger</span></div>
-      <div class="right"><button class="b-ghost" onclick="toggleTheme()" id="themeBtn">Light</button></div>
+      <div class="right"><button class="b-ghost" onclick="go('cart')" id="cartTop">Bid Cart</button><button class="b-ghost" onclick="toggleTheme()" id="themeBtn">Light</button></div>
     </div>
     <div id="page"></div>
   </main>
@@ -178,7 +184,8 @@ function seedLots(){
 /* one wallet per bidder TIN; S.wallet / S.holds / S.txns always point at the logged-in bidder's account */
 const curTin = () => (S && S.user) ? S.user.tin : '_guest';
 function acct(tin){ if(!S.accounts[tin]) S.accounts[tin] = {available:0, held:0, holds:{}, txns:[]}; return S.accounts[tin]; }
-function fresh(){ return {offset:0, page:'lots', user:null, users:{}, accounts:{}, seq:0, banned:{'100200999':'Default on lot TZDL-2025-118-0042'}, cns:[], withdrawals:[], applied:0, revenue:0, lots:null, reg:{step:1}, filter:'',
+function fresh(){ return {offset:0, page:'lots', user:null, users:{}, accounts:{}, carts:{}, seq:0,
+  get cart(){ return this.carts[curTin()] || (this.carts[curTin()] = {}); }, banned:{'100200999':'Default on lot TZDL-2025-118-0042'}, cns:[], withdrawals:[], applied:0, revenue:0, lots:null, reg:{step:1}, filter:'',
   get wallet(){ return acct(curTin()); }, get holds(){ return acct(curTin()).holds; }, get txns(){ return acct(curTin()).txns; }}; }
 S = fresh(); S.lots = seedLots();
 
@@ -215,14 +222,89 @@ function placeBid(lotId){
   if(r.max && amt > r.max) return fail(`Maximum allowed bid is ${fmt(r.max)} (+20% of highest bid, R6).`);
   const newHold = Math.ceil(amt*HOLD), extra = newHold - holdOf(lot.id);
   if(extra > S.wallet.available) return fail(`Insufficient available balance. This bid needs ${fmt(extra)} held (25%), you have ${fmt(S.wallet.available)}. Top up your wallet.`);
+  commitBid(lot, amt);
+  toast(`Bid placed: <b>${fmt(amt)}</b> on ${lot.id}.<br>${fmt(extra)} moved to held.`, 'good');
+  $('bidAmt').value = ''; openLot(lot.id); render();
+}
+/* records a bid that has already passed every check; returns the amount moved to held */
+function commitBid(lot, amt){
+  const newHold = Math.ceil(amt*HOLD), extra = newHold - holdOf(lot.id);
   txn('HOLD', lot.id, -extra, extra, `25% of bid ${fmt(amt)}`);
   const prev = lot.highestBy;
   S.holds[lot.id] = newHold; lot.accepted = true;
   lot.highest = amt; lot.highestBy = curTin(); lot.myBid = amt; lot.bids.unshift({t:now(), who:curTin(), amt});
   releaseOutbid(lot, prev);
-  toast(`Bid placed: <b>${fmt(amt)}</b> on ${lot.id}.<br>${fmt(extra)} moved to held.`, 'good');
+  delete S.cart[lot.id];
   if($('autoComp').checked && Math.random() < 0.6) setTimeout(() => competitorBid(lot, true), 4000 + Math.random()*5000);
-  $('bidAmt').value = ''; openLot(lot.id); render();
+  return extra;
+}
+
+/* ---------- bid cart: collect several lots, then bid on all or some of them at once ---------- */
+const num = v => Math.round(Number(String(v).replace(/[, ]/g,'')));
+const cartCount = () => S.user ? Object.keys(S.cart).length : 0;
+function amountErr(lot, amt){
+  const r = bidRange(lot);
+  if(!amt || amt <= 0) return 'Enter a bid amount.';
+  if(amt < r.min) return `Below the minimum ${fmt(r.min)}` + (lot.highest ? ' (+1%, R6).' : ' (starting price).');
+  if(r.max && amt > r.max) return `Above the maximum ${fmt(r.max)} (+20%, R6).`;
+  return null;
+}
+function cartRow(lot, it){
+  const hold = Math.ceil((it.amt || 0)*HOLD), extra = Math.max(0, hold - holdOf(lot.id));
+  if(lot.status !== 'live') return {bidable:false, msg:'Bidding closed — remove from cart.', kind:'off', hold, extra};
+  if(lot.highestBy === curTin()) return {bidable:false, msg:'You are already the highest bidder.', kind:'off', hold, extra};
+  const el = eligibility(lot); if(!el.ok) return {bidable:false, msg:el.reason, kind:'bad', hold, extra};
+  const err = amountErr(lot, it.amt);
+  return {bidable:true, msg:err || 'Ready', kind:err ? 'bad' : 'ok', err, hold, extra};
+}
+function addToCart(id, amt){
+  if(!S.user) return toast('Log in to use the bid cart.', 'warn');
+  const l = S.lots.find(x => x.id === id);
+  if(l.status !== 'live') return toast('Bidding on this lot is closed.', 'warn');
+  const el = eligibility(l); if(!el.ok) return toast(el.reason, 'bad');
+  const had = !!S.cart[id];
+  S.cart[id] = {amt: amt || (had ? S.cart[id].amt : bidRange(l).min), sel: true};
+  toast(had ? `Cart amount for ${id} updated to <b>${fmt(S.cart[id].amt)}</b>.` : `Added ${id} to your bid cart. <a onclick="closeModal();go('cart')">Review cart</a>`, 'good');
+  refreshOpenLot(id); render();
+}
+function removeFromCart(id){ delete S.cart[id]; refreshOpenLot(id); render(); }
+function toggleCart(id){ S.cart[id] ? removeFromCart(id) : addToCart(id); }
+function cartAmt(id, v){ S.cart[id].amt = num(v); updateCart(); }
+function cartSel(id, on){ S.cart[id].sel = on; render(); }
+function cartSelAll(on){ S.lots.forEach(l => { const it = S.cart[l.id]; if(it && cartRow(l, it).bidable) it.sel = on; }); render(); }
+function cartRemoveSelected(){ Object.keys(S.cart).forEach(id => { if(S.cart[id].sel) delete S.cart[id]; }); render(); }
+function cartUseMin(){ S.lots.forEach(l => { const it = S.cart[l.id]; if(it && it.sel && l.status === 'live') it.amt = bidRange(l).min; }); render(); }
+function cartClean(){ S.lots.forEach(l => { const it = S.cart[l.id]; if(it && !cartRow(l, it).bidable) delete S.cart[l.id]; }); render(); }
+function cartItems(all){ return S.lots.filter(l => S.cart[l.id]).map(l => ({l, it:S.cart[l.id], st:cartRow(l, S.cart[l.id])})).filter(x => x.st.bidable && (all || x.it.sel)); }
+function cartTotals(items){ return items.reduce((s, x) => ({bid:s.bid + (x.it.amt || 0), extra:s.extra + x.st.extra}), {bid:0, extra:0}); }
+/* refresh hold cells and the summary while typing, without re-rendering the inputs */
+function updateCart(){
+  S.lots.forEach(l => { const it = S.cart[l.id]; if(!it) return; const st = cartRow(l, it), h = $('ch-' + l.id), m = $('cm-' + l.id);
+    if(h) h.textContent = fmt(st.hold); if(m){ m.innerHTML = cartMsg(st); m.closest('tr').className = st.kind === 'ok' ? '' : st.kind; } });
+  if($('cartSum')) $('cartSum').innerHTML = cartSummary();
+}
+const cartMsg = st => st.kind === 'ok' ? '<span class="badge bg-green">Ready</span>' : st.kind === 'off' ? `<span class="hint">${st.msg}</span>` : `<span class="err" style="margin:0">${st.msg}</span>`;
+function cartSummary(){
+  const sel = cartItems(false), t = cartTotals(sel), after = S.wallet.available - t.extra;
+  return `<div class="sum"><div><small>Selected lots</small><b>${sel.length}</b></div><div><small>Total of selected bids</small><b>${fmt(t.bid)}</b></div>
+    <div><small>Hold needed now (25%)</small><b>${fmt(t.extra)}</b></div><div><small>Available balance</small><b>${fmt(S.wallet.available)}</b></div>
+    <div><small>Available after bidding</small><b style="color:${after < 0 ? 'var(--red)' : 'inherit'}">${fmt(after)}</b></div></div>
+    ${after < 0 ? `<div class="callout bad">Your available balance is <b>${fmt(-after)}</b> short for the selected bids. Deselect some lots or <a onclick="go('topup')">top up</a>.</div>` : ''}`;
+}
+function bidCart(all){
+  const fail = m => { $('cartErr').textContent = m; };
+  if(isBanned()) return fail('Your TIN is banned from auctions (R9).');
+  if(IDRAS[S.user.tin].inactive) return fail('Pre-auction TIN check failed: TIN is not active in IDRAS (R2).');
+  const items = cartItems(all);
+  if(!items.length) return fail(all ? 'There are no lots in your cart that you can bid on.' : 'Select at least one lot.');
+  const bad = items.filter(x => x.st.err);
+  if(bad.length) return fail(`Fix the amount on ${bad.length} lot${bad.length > 1 ? 's' : ''} highlighted in red. No bids were placed.`);
+  if(!$('cartAccept').checked) return fail('Accept the lot conditions and no-warranty notice first (R13).');
+  const t = cartTotals(items);
+  if(t.extra > S.wallet.available) return fail(`Insufficient available balance. These bids need ${fmt(t.extra)} held (25%), you have ${fmt(S.wallet.available)}. No bids were placed.`);
+  items.forEach(x => commitBid(x.l, x.it.amt));
+  toast(`<b>${items.length} bid${items.length > 1 ? 's' : ''} placed</b> · total ${fmt(t.bid)}.<br>${fmt(t.extra)} moved to held.`, 'good');
+  Object.keys(S.cart).length ? render() : go('mybids');
 }
 function competitorBid(lot, auto){
   if(lot.status !== 'live') return;
@@ -378,13 +460,14 @@ function logout(){ S.user = null; go('lots'); }
 /* ---------- views ---------- */
 const MENU = [
   ['h4', 'Customs Warehouse'],
-  ['h5', 'Auction Goods'], ['lots', 'Auction Goods List'], ['terms', 'Auction Terms & Condition'], ['mybids', 'My Bids', 1],
+  ['h5', 'Auction Goods'], ['lots', 'Auction Goods List'], ['terms', 'Auction Terms & Condition'], ['cart', 'Bid Cart', 1], ['mybids', 'My Bids', 1],
   ['h5', 'Bidder Wallet', 1], ['wallet', 'Wallet Dashboard'], ['topup', 'Top Up (Deposit)'], ['withdraw', 'Withdraw'], ['statement', 'Wallet Statement'],
   ['h5', 'Customs Back Office', 1], ['admin', 'Wallet Monitoring'],
 ];
 const PAGES = {
   lots:['Auction Goods List','UI-CGME-0504-001Q','Cargo Mgmt. / Customs Warehouse / Auction Goods / Auction Goods List'],
   terms:['Auction Terms & Condition','UI-CGME-0504-003Q','Cargo Mgmt. / Customs Warehouse / Auction Goods / Terms'],
+  cart:['Bid Cart','UI-WLT-0106 · proposed','Cargo Mgmt. / Auction Goods / Bid Cart'],
   mybids:['My Bids','UI-WLT-0105 · proposed','Cargo Mgmt. / Auction Goods / My Bids'],
   wallet:['Wallet Dashboard','UI-WLT-0101 · proposed','Cargo Mgmt. / Bidder Wallet / Dashboard'],
   topup:['Top Up (Deposit)','UI-WLT-0102 · proposed','Cargo Mgmt. / Bidder Wallet / Top Up'],
@@ -396,7 +479,8 @@ const PAGES = {
 };
 function go(p){ S.page = p; window.scrollTo(0,0); render(); }
 function render(){
-  $('menu').innerHTML = MENU.map(([k, t, n]) => k === 'h4' ? `<h4>${t}</h4>` : k === 'h5' ? `<h5>${t} ${n ? '<span class="new">NEW</span>' : ''}</h5>` : `<a class="${S.page === k ? 'active' : ''}" onclick="go('${k}')">${t} ${n ? '<span class="new">NEW</span>' : ''}</a>`).join('');
+  $('menu').innerHTML = MENU.map(([k, t, n]) => k === 'h4' ? `<h4>${t}</h4>` : k === 'h5' ? `<h5>${t} ${n ? '<span class="new">NEW</span>' : ''}</h5>` : `<a class="${S.page === k ? 'active' : ''}" onclick="go('${k}')">${t} ${k === 'cart' && cartCount() ? `<span class="cnt">${cartCount()}</span> ` : ''}${n ? '<span class="new">NEW</span>' : ''}</a>`).join('');
+  $('cartTop').innerHTML = 'Bid Cart' + (cartCount() ? ` <span class="cnt">${cartCount()}</span>` : '');
   $('who').innerHTML = S.user
     ? `<div style="font-weight:700">${esc(S.user.name)}</div><div style="font-size:12px;opacity:.85;margin:2px 0 10px">TIN ${S.user.tin} · ${S.user.type}</div>
        <div style="font-size:12px;opacity:.85">Available</div><div style="font-size:18px;font-weight:700;margin-bottom:10px">${fmt(S.wallet.available)}</div>
@@ -405,7 +489,7 @@ function render(){
     : `<div class="btns"><button class="b-white" onclick="go('login')">Login</button><button class="b-ghost" style="color:#fff;border-color:#fff" onclick="go('register')">User Registration</button></div>`;
   const [title, ui, crumb] = PAGES[S.page];
   const parts = crumb.split(' / ');
-  const needsUser = ['mybids','wallet','topup','withdraw','statement'].includes(S.page);
+  const needsUser = ['cart','mybids','wallet','topup','withdraw','statement'].includes(S.page);
   $('page').innerHTML = `<div class="head"><h1>${title} <span class="muted" style="font-weight:500;font-size:15px">(${ui})</span></h1><div class="crumb">${parts.slice(0,-1).join(' / ')} / <b>${parts.at(-1)}</b></div></div>`
     + (needsUser && !S.user ? loginNeeded() : VIEWS[S.page]());
   $('demoLot').innerHTML = S.lots.map(l => `<option value="${l.id}">${l.id} · ${l.status}</option>`).join('');
@@ -426,10 +510,10 @@ const VIEWS = {
         <div class="lbl">Year</div><div><input value="2026"></div><div class="lbl">Location</div><div><input placeholder="Search location"></div>
         <div class="lbl">Region</div><div><select><option>Select</option><option>Dar es Salaam</option></select></div><div class="lbl">Categories</div><div><select onchange="S.filter=this.value;render()"><option value="">Select</option>${cats.map(c => `<option ${S.filter === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
       </div><div class="row" style="justify-content:space-between;margin-top:14px"><button class="b-yellow" onclick="S.filter='';render()">Reset</button><button class="b-blue">Search</button></div></div>
-      ${S.user ? `<div class="callout ${isBanned() ? 'bad' : 'good'}">${isBanned() ? 'Your TIN is <b>banned</b> from auctions. You can still withdraw your available balance.' : `Wallet available: <b>${fmt(S.wallet.available)}</b> · held: <b>${fmt(S.wallet.held)}</b>. Each bid holds 25% of the bid amount.`}</div>` : `<div class="callout warn">You can browse lots. To bid, <a onclick="go('register')">register</a> with a TIN and email that match IDRAS, then fund your wallet.</div>`}
+      ${S.user ? `<div class="callout ${isBanned() ? 'bad' : 'good'}">${isBanned() ? 'Your TIN is <b>banned</b> from auctions. You can still withdraw your available balance.' : `Wallet available: <b>${fmt(S.wallet.available)}</b> · held: <b>${fmt(S.wallet.held)}</b>. Each bid holds 25% of the bid amount.`}${cartCount() ? `<br>Bid cart: <b>${cartCount()}</b> lot${cartCount() > 1 ? 's' : ''} waiting · <a onclick="go('cart')">Review and bid</a>` : ' Add several lots to the <b>bid cart</b> to bid on them in one go.'}</div>` : `<div class="callout warn">You can browse lots. To bid, <a onclick="go('register')">register</a> with a TIN and email that match IDRAS, then fund your wallet.</div>`}
       <div class="card" style="padding:0;overflow:auto"><table><tr><th></th><th>Image</th><th>Auction LOTS No</th><th>Description of Goods</th><th>Location</th><th>Starting Price</th><th>Highest Bid</th><th>CountDown Time</th></tr>
       ${list.map((l, i) => `<tr><td><b>${i+1}</b></td><td><div class="img">${truck}</div></td><td>${l.id}</td>
-        <td style="max-width:280px"><a onclick="openLot('${l.id}')">${l.desc}</a><div style="margin-top:12px"><button class="b-blue" onclick="openLot('${l.id}')">${l.status === 'live' ? 'View Details & Bid' : 'View Details'}</button></div></td>
+        <td style="max-width:280px"><a onclick="openLot('${l.id}')">${l.desc}</a><div style="margin-top:12px"><button class="b-blue" onclick="openLot('${l.id}')">${l.status === 'live' ? 'View Details & Bid' : 'View Details'}</button></div>${l.status === 'live' && !(S.user && !eligibility(l).ok) ? `<div style="margin-top:8px"><button class="${S.cart[l.id] ? 'b-green' : 'b-ghost'}" onclick="toggleCart('${l.id}')">${S.cart[l.id] ? '✓ In bid cart' : '+ Add to bid cart'}</button></div>` : ''}</td>
         <td>${l.location}${l.restricted ? '<div><span class="badge bg-amber">Restricted · permit needed</span></div>' : ''}${S.user && !eligibility(l).ok ? '<div style="margin-top:6px"><span class="badge bg-red">Not eligible</span></div>' : ''}</td><td class="price">${fmt(l.start)}</td>
         <td>${l.highest ? `<b>${fmt(l.highest)}</b><div class="muted" style="font-size:12px">${l.highestBy === curTin() ? '<span class="badge bg-green">You are highest</span>' : esc(whoLabel(l.highestBy))}</div>` : '<span class="muted">No bids yet</span>'}</td>
         <td>${l.status === 'live' ? `<div>Auction Ends In :</div><div class="cd" data-end="${l.endsAt}">${countdown(l.endsAt - now())}</div>` : statusBadge(l)}</td></tr>`).join('')}
@@ -517,6 +601,33 @@ const VIEWS = {
       <div class="card"><h3 style="margin-top:0">My withdrawals</h3>${wdTable(false)}</div>`;
   },
   statement(){ return `<div class="card" style="overflow:auto">${txnTable(S.txns)}</div>`; },
+  cart(){
+    const rows = S.lots.filter(l => S.cart[l.id]);
+    if(!rows.length) return `<div class="card"><div class="muted">Your bid cart is empty.</div><div class="hint" style="margin-top:6px">On the <a onclick="go('lots')">Auction Goods List</a>, click <b>+ Add to bid cart</b> on each lot you want, then come back here to bid on all of them or only the ones you select.</div></div>`;
+    const bidable = rows.filter(l => cartRow(l, S.cart[l.id]).bidable), allSel = bidable.length && bidable.every(l => S.cart[l.id].sel);
+    const stale = rows.length - bidable.length;
+    return `${isBanned() ? '<div class="callout bad">Your TIN is banned from auctions. Bidding is blocked.</div>' : ''}
+      <div class="callout">Tick the lots you want, set your amount for each, then bid on the <b>selected</b> lots or on <b>all</b> of them at once. Each bid holds 25% of its amount. If any selected bid fails a check, no bids are placed.</div>
+      <div class="card cart" style="padding:0;overflow:auto"><table><tr><th><input type="checkbox" style="width:auto" title="Select all" ${allSel ? 'checked' : ''} ${bidable.length ? '' : 'disabled'} onchange="cartSelAll(this.checked)"></th><th>Auction LOTS No</th><th class="l">Description</th><th>Highest bid</th><th>Allowed range</th><th>Your bid (TZS)</th><th>Hold (25%)</th><th>Ends in</th><th>Check</th><th></th></tr>
+      ${rows.map(l => { const it = S.cart[l.id], st = cartRow(l, it), r = bidRange(l);
+        return `<tr class="${st.kind === 'ok' ? '' : st.kind}"><td><input type="checkbox" style="width:auto" ${st.bidable && it.sel ? 'checked' : ''} ${st.bidable ? '' : 'disabled'} onchange="cartSel('${l.id}',this.checked)"></td>
+          <td><a onclick="openLot('${l.id}')">${l.id}</a></td><td class="l" style="max-width:240px">${l.desc}</td>
+          <td>${l.highest ? fmt(l.highest) + `<div class="hint">${esc(whoLabel(l.highestBy))}</div>` : '<span class="muted">No bids yet</span>'}</td>
+          <td style="white-space:nowrap">${l.status === 'live' ? fmt(r.min) + (r.max ? '<div class="hint">to ' + fmt(r.max) + '</div>' : '<div class="hint">or more</div>') : '—'}</td>
+          <td><input type="text" inputmode="numeric" value="${(it.amt || '').toLocaleString('en-US')}" oninput="cartAmt('${l.id}',this.value)" ${st.bidable ? '' : 'disabled'}></td>
+          <td id="ch-${l.id}">${fmt(st.hold)}</td>
+          <td>${l.status === 'live' ? `<span class="cd" style="font-size:14px" data-end="${l.endsAt}">${countdown(l.endsAt - now())}</span>` : statusBadge(l)}</td>
+          <td id="cm-${l.id}" style="max-width:220px">${cartMsg(st)}</td>
+          <td><button class="b-ghost" title="Remove from cart" onclick="removeFromCart('${l.id}')">✕</button></td></tr>`; }).join('')}
+      </table></div>
+      <div class="card"><div id="cartSum">${cartSummary()}</div>
+        <label class="row"><input type="checkbox" id="cartAccept" style="width:auto"> I accept the conditions for every lot I bid on. Customs gives no warranty on quality, quantity or condition (R13).</label>
+        <div class="err" id="cartErr"></div>
+        <div class="row" style="justify-content:space-between;margin-top:12px">
+          <div class="row"><button class="b-ghost" onclick="cartUseMin()">Set selected to minimum</button><button class="b-ghost" onclick="cartRemoveSelected()">Remove selected</button>${stale ? `<button class="b-ghost" onclick="cartClean()">Clear ${stale} closed/blocked</button>` : ''}<button class="b-ghost" onclick="go('lots')">Add more lots</button></div>
+          <div class="row"><button class="b-ghost" onclick="bidCart(true)" ${bidable.length ? '' : 'disabled'}>Bid on all (${bidable.length})</button><button class="b-blue" onclick="bidCart(false)">Bid on selected</button></div>
+        </div></div>`;
+  },
   mybids(){
     const mine = S.lots.filter(l => l.myBid);
     if(!mine.length) return `<div class="card muted">You have not bid on any lot yet. <a onclick="go('lots')">Browse lots</a></div>`;
@@ -590,7 +701,7 @@ function openLot(id){
       <tr><td>Your bid (TZS)</td><td><input id="bidAmt" value="${keep}" oninput="bidPreview('${l.id}')" placeholder="${r.min.toLocaleString('en-US')}"><div class="hint" id="bidPrev"></div></td></tr></table>
       <label class="row" style="margin-top:10px"><input type="checkbox" id="accept" style="width:auto" ${l.accepted ? 'checked' : ''}> I accept the conditions for this lot. Customs gives no warranty on quality, quantity or condition (R13).</label>
       <div class="err" id="bidErr"></div>
-      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="b-blue" onclick="placeBid('${l.id}')" ${l.highestBy === curTin() ? 'disabled' : ''}>${l.highestBy === curTin() ? 'You are the highest bidder' : 'Place bid'}</button></div>`;
+      <div class="row" style="justify-content:flex-end;margin-top:10px">${l.highestBy === curTin() ? '' : `<button class="b-ghost" onclick="addToCart('${l.id}', num($('bidAmt').value))">${S.cart[l.id] ? 'Update cart amount' : 'Add to bid cart'}</button>`}<button class="b-blue" onclick="placeBid('${l.id}')" ${l.highestBy === curTin() ? 'disabled' : ''}>${l.highestBy === curTin() ? 'You are the highest bidder' : 'Place bid'}</button></div>`;
   modal(`<div class="mhead"><h2>Auction Goods Details (UI-CGME-0504-002Q)</h2><button class="b-ghost" onclick="closeModal()">✕</button></div><div class="mbody">
     <div class="two"><div class="card" style="margin:0"><table class="kv">
       <tr><td>Auction LOTS No./Times</td><td>${l.id} / 1</td></tr>${l.fuel ? `<tr><td>Fuel Type</td><td>${l.fuel}</td></tr>` : ''}${l.trans ? `<tr><td>Transmission Type</td><td>${l.trans}</td></tr>` : ''}
