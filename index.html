@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bidder Wallet Prototype</title>
+<style>
+:root{--bg:#1c2433;--side:#243042;--panel:#243042;--panel2:#2b384b;--line:#3a475b;--text:#e6ebf2;--muted:#9aa7b8;--blue:#1677d2;--link:#3b9cf5;--yellow:#e5d900;--red:#ef4444;--green:#22c55e;--amber:#f59e0b;--input:#334155}
+:root[data-theme="light"]{--bg:#eef2f7;--side:#ffffff;--panel:#ffffff;--panel2:#f4f6fa;--line:#d7dde7;--text:#1b2433;--muted:#5b6778;--input:#eef2f7;--link:#1667c2}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{color:var(--link);cursor:pointer}
+.proto{background:var(--amber);color:#1b1b1b;text-align:center;font-weight:600;padding:6px 12px;font-size:13px}
+.app{display:flex;min-height:calc(100vh - 31px)}
+aside{width:290px;flex:none;background:var(--side);border-radius:0 32px 32px 0;padding:20px 16px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;letter-spacing:.5px;margin-bottom:18px}
+.brand .logo{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#0b3f75);display:grid;place-items:center;color:#fff;font-size:15px}
+.brand small{display:block;font-size:10px;font-weight:500;color:var(--muted);letter-spacing:0}
+.tabs{display:flex;gap:8px;margin-bottom:18px}
+.tabs div{flex:1;text-align:center;padding:9px;border-radius:2px;font-weight:600}
+.tabs .on{background:var(--blue);color:#fff}.tabs .off{background:var(--panel2);color:var(--muted)}
+.menu h4{margin:16px 6px 8px;font-size:16px;color:var(--muted);font-weight:600}
+.menu h5{margin:14px 6px 6px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
+.menu a{display:block;padding:7px 8px 7px 22px;color:var(--text);text-decoration:none;border-radius:6px;position:relative}
+.menu a:before{content:"·";position:absolute;left:10px;color:var(--muted)}
+.menu a.active{color:var(--link);text-decoration:underline}
+.menu a:hover{background:var(--panel2)}
+.new{font-size:10px;background:var(--green);color:#06210f;border-radius:4px;padding:1px 5px;font-weight:700}
+.who{margin-top:auto;background:var(--blue);border-radius:16px;padding:16px;color:#fff}
+.who .btns{display:flex;gap:8px}
+.who button{flex:1}
+main{flex:1;min-width:0;padding:18px 24px 80px}
+.top{display:flex;align-items:center;gap:24px;margin-bottom:18px;flex-wrap:wrap}
+.top .nav{display:flex;gap:28px;font-weight:600;font-size:16px}
+.top .nav span.cur{color:var(--link)}
+.top .right{margin-left:auto;display:flex;gap:8px}
+.head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.head h1{font-size:21px;margin:0}
+.crumb{color:var(--muted);font-size:13px}.crumb b{color:var(--link);font-weight:500}
+.card{background:var(--panel);border-radius:10px;padding:18px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:160px 1fr 160px 1fr;border:1px solid var(--line)}
+.grid>div{padding:10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);display:flex;align-items:center}
+.grid .lbl{font-weight:700;background:var(--panel2)}
+input,select{width:100%;background:var(--input);border:1px solid var(--line);color:var(--text);padding:9px 10px;border-radius:4px;font:inherit}
+button{font:inherit;border:0;border-radius:4px;padding:8px 14px;cursor:pointer;font-weight:600}
+.b-blue{background:var(--blue);color:#fff}.b-yellow{background:var(--yellow);color:#111}.b-red{background:var(--red);color:#fff}.b-green{background:var(--green);color:#06210f}.b-ghost{background:transparent;border:1px solid var(--line);color:var(--text)}.b-white{background:#fff;color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+table{width:100%;border-collapse:collapse}
+th{background:var(--panel2);padding:12px 10px;text-align:center;font-weight:700;border:1px solid var(--line)}
+td{padding:12px 10px;border:1px solid var(--line);text-align:center;vertical-align:middle}
+td.l,th.l{text-align:left}
+.price{color:var(--red);font-weight:600}
+.cd{color:var(--red);font-size:18px}
+.img{width:150px;height:96px;border-radius:4px;background:var(--panel2);display:grid;place-items:center;margin:auto;color:var(--muted)}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700}
+.bg-green{background:rgba(34,197,94,.18);color:var(--green)}.bg-red{background:rgba(239,68,68,.18);color:var(--red)}.bg-amber{background:rgba(245,158,11,.18);color:var(--amber)}.bg-blue{background:rgba(22,119,210,.2);color:var(--link)}.bg-gray{background:var(--panel2);color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
+.stat{background:var(--panel);border-radius:10px;padding:16px;border-left:4px solid var(--blue)}
+.stat small{color:var(--muted);display:block;margin-bottom:6px}
+.stat b{font-size:22px}
+.stat.h{border-color:var(--amber)}.stat.t{border-color:var(--green)}.stat.r{border-color:var(--red)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted)}
+.err{color:var(--red);font-size:13px;margin-top:6px}
+.ok{color:var(--green);font-size:13px;margin-top:6px}
+.steps{display:flex;justify-content:center;align-items:flex-start;gap:0;padding:10px 0 4px}
+.step{text-align:center;width:170px}
+.step .dot{width:54px;height:54px;border-radius:50%;margin:0 auto 10px;display:grid;place-items:center;font-weight:700;background:#f2f4f7;color:#b0b8c4}
+.step.on .dot{background:var(--blue);color:#fff;box-shadow:0 0 0 6px rgba(22,119,210,.25)}
+.step.done .dot{background:var(--green);color:#06210f}
+.step small{color:var(--link)}
+.bar{flex:none;width:80px;height:2px;background:var(--line);margin-top:27px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50}
+.modal.show{display:flex}
+.mbox{background:var(--bg);border-radius:10px;width:min(980px,100%);padding:0 0 16px}
+.mhead{display:flex;justify-content:space-between;align-items:center;padding:16px 20px}
+.mhead h2{margin:0;font-size:19px}
+.mbody{padding:0 20px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.kv{width:100%}.kv td{text-align:left}.kv td:first-child{font-weight:700;background:var(--panel2);width:44%}
+.callout{border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:6px;padding:10px 12px;background:var(--panel2);margin:10px 0}
+.callout.warn{border-left-color:var(--amber)}.callout.bad{border-left-color:var(--red)}.callout.good{border-left-color:var(--green)}
+.demo{position:fixed;right:16px;bottom:16px;width:320px;background:var(--panel);border:1px solid var(--amber);border-radius:10px;z-index:40;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+.demo summary{padding:10px 14px;font-weight:700;cursor:pointer;color:var(--amber)}
+.demo .in{padding:0 14px 14px;display:grid;gap:8px}
+.demo .clock{font-size:12px;color:var(--muted)}
+#toasts{position:fixed;top:44px;right:16px;display:grid;gap:8px;z-index:60}
+.toast{background:var(--panel);border-left:4px solid var(--blue);padding:10px 14px;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.35);max-width:360px}
+.toast.bad{border-color:var(--red)}.toast.good{border-color:var(--green)}.toast.warn{border-color:var(--amber)}
+.hint{font-size:12px;color:var(--muted);line-height:1.6}
+code{background:var(--panel2);padding:1px 5px;border-radius:4px}
+@media (max-width:900px){.app{flex-direction:column}aside{width:auto;border-radius:0}.grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}.top .nav{display:none}main{padding:16px}.demo{width:calc(100% - 32px)}}
+</style>
+</head>
+<body>
+<div class="proto">PROTOTYPE · simulated data · not connected to IDRAS, banks or the live auction system</div>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="logo">SW</div><div>SINGLE WINDOW<small>Online Auction · Bidder Wallet prototype</small></div></div>
+    <div class="tabs"><div class="on">Menu</div><div class="off">Bookmark</div></div>
+    <nav class="menu" id="menu"></nav>
+    <div class="who" id="who"></div>
+  </aside>
+  <main>
+    <div class="top">
+      <div class="nav"><span>Portal</span><span class="cur">Cargo Mgmt.</span><span>Passenger</span></div>
+      <div class="right"><button class="b-ghost" onclick="toggleTheme()" id="themeBtn">Light</button></div>
+    </div>
+    <div id="page"></div>
+  </main>
+</div>
+
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+<div id="toasts"></div>
+
+<details class="demo" id="demoBox">
+  <summary>Demo controls (simulation only) — click to open</summary>
+  <div class="in">
+    <div class="clock" id="clock"></div>
+    <select id="demoLot"></select>
+    <div class="row"><button class="b-ghost" style="flex:1" onclick="demoCompetitor()">Competitor bids</button><button class="b-ghost" style="flex:1" onclick="demoClose()">Close lot now</button></div>
+    <button class="b-ghost" onclick="advanceClock(48*3600e3+60e3)">Advance clock +48 hours</button>
+    <label class="row hint"><input type="checkbox" id="autoComp" style="width:auto" checked> Competitors may counter-bid automatically</label>
+    <button class="b-ghost" onclick="demoDeregister()">Deactivate my TIN in IDRAS</button>
+    <button class="b-ghost" onclick="cancelAuction()">Customs cancels the auction</button>
+    <button class="b-red" onclick="resetDemo()">Reset demo</button>
+  </div>
+</details>
+
+<script>
+/* ---------- helpers ---------- */
+const HOLD = 0.25, MIN_STEP = 0.01, MAX_STEP = 0.20, PAY_HOURS = 48, REMOVE_DAYS = 3;
+const fmt = n => 'TZS ' + Math.round(n).toLocaleString('en-US');
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S;
+const now = () => Date.now() + S.offset;
+const dt = t => new Date(t).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'});
+function countdown(ms){ if(ms <= 0) return '0d : 0h : 0m : 0s'; const s = Math.floor(ms/1000); return `${Math.floor(s/86400)}d : ${Math.floor(s%86400/3600)}h : ${Math.floor(s%3600/60)}m : ${s%60}s`; }
+function toast(msg, kind=''){ const t = document.createElement('div'); t.className = 'toast ' + kind; t.innerHTML = msg; $('toasts').appendChild(t); setTimeout(() => t.remove(), 5200); }
+
+/* ---------- mock data ---------- */
+const IDRAS = {
+  '100200300': {name:'Demo Trading Co. Ltd', type:'Company', business:true, email:'demo.bidder@example.com', phone:'+255 7** *** 210'},
+  '100200301': {name:'Asha Mohamed', type:'Individual', business:false, email:'asha.m@example.com', phone:'+255 6** *** 118'},
+  '100200302': {name:'Kilima Imports Ltd', type:'Company', business:true, email:null, phone:'+255 7** *** 554'},
+  '100200303': {name:'Old Harbour Traders', type:'Company', business:true, email:'old.harbour@example.com', phone:'+255 7** *** 901', inactive:true},
+  '100200304': {name:'Juma Officer', type:'Individual', business:false, email:'j.officer@example.com', phone:'+255 7** *** 333', staff:true},
+};
+const PERMITS = {'PERMIT-001':'Chemicals regulator permit, valid to Dec 2027'};
+const VEHICLE_CATS = ['Vehicles And Other Transport Equipment'];
+/* eligibility rules R15, R17, R18, R19 */
+function eligibility(lot){
+  if(!S.user) return {ok:true};
+  const rec = IDRAS[S.user.tin];
+  if(rec.staff) return {ok:false, reason:'Revenue Authority officers may not bid (R17).'};
+  if(!rec.business && !VEHICLE_CATS.includes(lot.cat)) return {ok:false, reason:'Non-business TIN holders may bid only on motor vehicles, tricycles, motorcycles and bicycles (R15).'};
+  if(lot.ownerTin === S.user.tin && !lot.domesticTax) return {ok:false, reason:'You are recorded as the owner of these goods and may not bid on them (R18).'};
+  if(lot.restricted && !S.user.permit) return {ok:false, reason:`Restricted goods: a verified ${lot.restricted} is required (R19). Add it to your bidder profile.`};
+  return {ok:true, note: lot.ownerTin === S.user.tin ? 'You own these goods; bidding is allowed because the sale is for unpaid domestic taxes (R18).' : ''};
+}
+function seedLots(){
+  const t = Date.now();
+  const L = (n, desc, cat, start, mins, extra) => { const lot = {id:'TZDL-2026-461-000'+n, desc, cat, location:'[WH-DL01] PORT TERMINAL', start, endsAt:t+mins*60e3, highest:null, highestBy:null, my:{}, status:'live', bids:[], acceptedBy:{}, ...extra};
+    Object.defineProperty(lot, 'myBid', {get(){ return lot.my[curTin()] || null; }, set(v){ lot.my[curTin()] = v; }});
+    Object.defineProperty(lot, 'accepted', {get(){ return !!lot.acceptedBy[curTin()]; }, set(v){ lot.acceptedBy[curTin()] = v; }});
+    return lot; };
+  return [
+    L(1, '1 UNIT USED MOBILE CRUSHER, YOM: 2012', 'Machinery And Equipment', 25400000, 25, {weight:'18,200 KG'}),
+    L(2, '1 UNIT USED TRUCK CHASSIS, YOM: 2007, TRANSMISSION: AUTOMATIC, LHD', 'Vehicles And Other Transport Equipment', 38500000, 30, {weight:'12,380 KG', fuel:'Diesel', trans:'Automatic'}),
+    L(3, '1 UNIT USED BOX TRUCK, YOM: 2011, LHD', 'Vehicles And Other Transport Equipment', 56000000, 35, {weight:'9,750 KG', fuel:'Diesel', trans:'Manual'}),
+    L(4, '1 UNIT USED MINI TRUCK, YOM: 2015', 'Vehicles And Other Transport Equipment', 9800000, 40, {weight:'1,100 KG', fuel:'Petrol', trans:'Manual', ownerTin:'100200301'}),
+    L(5, '40 BALES OF TEXTILE FABRICS', 'Textiles And Textile Articles', 12300000, 45, {weight:'4,000 KG'}),
+    L(6, '1 UNIT USED GENERATOR SET 250 KVA', 'Machinery And Equipment', 18750000, 50, {weight:'2,600 KG', ownerTin:'100200300', domesticTax:true}),
+    L(7, '200 DRUMS OF INDUSTRIAL CHEMICALS', 'Chemicals', 7400000, 55, {weight:'40,000 KG', restricted:'chemicals regulator permit'}),
+  ];
+}
+/* one wallet per bidder TIN; S.wallet / S.holds / S.txns always point at the logged-in bidder's account */
+const curTin = () => (S && S.user) ? S.user.tin : '_guest';
+function acct(tin){ if(!S.accounts[tin]) S.accounts[tin] = {available:0, held:0, holds:{}, txns:[]}; return S.accounts[tin]; }
+function fresh(){ return {offset:0, page:'lots', user:null, users:{}, accounts:{}, seq:0, banned:{'100200999':'Default on lot TZDL-2025-118-0042'}, cns:[], withdrawals:[], applied:0, revenue:0, lots:null, reg:{step:1}, filter:'',
+  get wallet(){ return acct(curTin()); }, get holds(){ return acct(curTin()).holds; }, get txns(){ return acct(curTin()).txns; }}; }
+S = fresh(); S.lots = seedLots();
+
+/* ---------- wallet ledger ---------- */
+function txnFor(tin, type, lot, availDelta, heldDelta, note){
+  const a = acct(tin); a.available += availDelta; a.held += heldDelta;
+  a.txns.unshift({id:'WT' + String(++S.seq).padStart(5,'0'), tin, time:now(), type, lot:lot||'', availDelta, heldDelta, avail:a.available, held:a.held, note});
+}
+const txn = (...args) => txnFor(curTin(), ...args);
+const holdOf = id => S.holds[id] || 0;
+const isRegistered = tin => !!(tin && S.users[tin]);
+const whoLabel = tin => tin === curTin() ? 'You' : isRegistered(tin) ? 'Bidder ' + tin.slice(-3) : tin;
+const bidderLabel = () => 'Bidder ' + Math.floor(100 + Math.random()*900);
+const isBanned = () => S.user && S.banned[S.user.tin];
+
+/* ---------- bidding rules ---------- */
+function bidRange(lot){
+  if(!lot.highest) return {min:lot.start, max:null};
+  return {min:Math.ceil(lot.highest*(1+MIN_STEP)), max:Math.floor(lot.highest*(1+MAX_STEP))};
+}
+function placeBid(lotId){
+  const lot = S.lots.find(l => l.id === lotId), amt = Math.round(Number($('bidAmt').value.replace(/[, ]/g,'')));
+  const fail = m => { $('bidErr').textContent = m; };
+  if(!S.user) return fail('Log in or register before bidding.');
+  if(isBanned()) return fail('Your TIN is banned from auctions (R9).');
+  if(IDRAS[S.user.tin].inactive) return fail('Pre-auction TIN check failed: TIN is not active in IDRAS (R2).');
+  if(lot.status !== 'live') return fail('Bidding on this lot is closed.');
+  const el = eligibility(lot); if(!el.ok) return fail(el.reason);
+  if(!$('accept').checked) return fail('Accept the lot conditions and no-warranty notice first (R13).');
+  if(!amt || amt <= 0) return fail('Enter a bid amount.');
+  if(lot.highestBy === curTin()) return fail('You are already the highest bidder on this lot.');
+  const r = bidRange(lot);
+  if(amt < r.min) return fail(`Minimum allowed bid is ${fmt(r.min)}` + (lot.highest ? ' (+1% of highest bid, R6).' : ' (starting price).'));
+  if(r.max && amt > r.max) return fail(`Maximum allowed bid is ${fmt(r.max)} (+20% of highest bid, R6).`);
+  const newHold = Math.ceil(amt*HOLD), extra = newHold - holdOf(lot.id);
+  if(extra > S.wallet.available) return fail(`Insufficient available balance. This bid needs ${fmt(extra)} held (25%), you have ${fmt(S.wallet.available)}. Top up your wallet.`);
+  txn('HOLD', lot.id, -extra, extra, `25% of bid ${fmt(amt)}`);
+  const prev = lot.highestBy;
+  S.holds[lot.id] = newHold; lot.accepted = true;
+  lot.highest = amt; lot.highestBy = curTin(); lot.myBid = amt; lot.bids.unshift({t:now(), who:curTin(), amt});
+  releaseOutbid(lot, prev);
+  toast(`Bid placed: <b>${fmt(amt)}</b> on ${lot.id}.<br>${fmt(extra)} moved to held.`, 'good');
+  if($('autoComp').checked && Math.random() < 0.6) setTimeout(() => competitorBid(lot, true), 4000 + Math.random()*5000);
+  $('bidAmt').value = ''; openLot(lot.id); render();
+}
+function competitorBid(lot, auto){
+  if(lot.status !== 'live') return;
+  let amt;
+  if(!lot.highest) amt = lot.start;
+  else { const p = MIN_STEP + Math.random()*(MAX_STEP - MIN_STEP)*0.5; amt = Math.min(Math.floor(lot.highest*(1+MAX_STEP)), Math.ceil(lot.highest*(1+p)/1000)*1000); }
+  const prev = lot.highestBy;
+  lot.highest = amt; lot.highestBy = bidderLabel(); lot.bids.unshift({t:now(), who:lot.highestBy, amt});
+  releaseOutbid(lot, prev);
+  if(prev !== curTin() && !auto) toast(`${lot.highestBy} bid ${fmt(amt)} on ${lot.id}.`);
+  refreshOpenLot(lot.id); render();
+}
+/* R5: the previous leader's hold is released the moment they are outbid */
+function releaseOutbid(lot, prevTin){
+  if(!isRegistered(prevTin) || prevTin === lot.highestBy) return;
+  const a = acct(prevTin), h = a.holds[lot.id] || 0; if(!h) return;
+  txnFor(prevTin, 'RELEASE', lot.id, h, -h, 'Outbid — hold released immediately (R5)'); a.holds[lot.id] = 0;
+  if(prevTin === curTin()) toast(`You were <b>outbid</b> on ${lot.id} (${fmt(lot.highest)}).<br>${fmt(h)} released to your available balance.`, 'warn');
+}
+function closeLot(lot){
+  if(lot.status !== 'live') return;
+  if(!lot.highest){ lot.status = 'unsold'; return; }
+  const w = lot.highestBy; lot.winnerTin = w;
+  if(isRegistered(w)){
+    const a = acct(w), h = a.holds[lot.id] || 0; a.holds[lot.id] = 0;
+    txnFor(w, 'APPLY', lot.id, 0, -h, '25% deposit applied to price — non-refundable (R7)'); S.applied += h;
+    lot.status = 'won'; lot.deposit = h; lot.dueAmt = lot.highest - h; lot.dueAt = now() + PAY_HOURS*3600e3;
+    if(w === curTin()) toast(`<b>You won ${lot.id}</b> at ${fmt(lot.highest)}.<br>Pay ${fmt(lot.dueAmt)} within 48 hours.`, 'good');
+  } else lot.status = 'sold';
+  if(lot.myBid && w !== curTin()) toast(`Auction closed for ${lot.id}. You did not win; your hold was already released.`);
+  refreshOpenLot(lot.id);
+}
+const iWon = l => l.winnerTin === curTin();
+function checkTimers(){
+  for(const lot of S.lots){
+    if(lot.status === 'live' && now() >= lot.endsAt) closeLot(lot);
+    if(lot.status === 'won' && now() >= lot.dueAt){
+      lot.status = 'defaulted'; S.applied -= lot.deposit; S.revenue += lot.deposit;
+      txnFor(lot.winnerTin, 'FORFEIT', lot.id, 0, 0, `${fmt(lot.deposit)} forfeited to Customs revenue (R9)`);
+      if(lot.winnerTin) S.banned[lot.winnerTin] = 'Default on lot ' + lot.id + ' — blacklisted; TIN deactivated for TRA services (R16)';
+      cancelBalanceCns(lot.id);
+      toast(`<b>Payment deadline missed</b> on ${lot.id}.<br>Deposit forfeited. TIN blacklisted and deactivated for TRA services (R16). Lot re-offered at next auction.`, 'bad');
+    }
+  }
+}
+
+/* ---------- payments ---------- */
+function newCn(purpose, amount, lot){ const cn = {tin:curTin(), no:'99' + Math.floor(1e10 + Math.random()*9e10), purpose, amount, lot:lot||'', created:now(), expires:now()+7*86400e3, status:'Pending'}; S.cns.unshift(cn); return cn; }
+function cancelBalanceCns(lotId){ S.cns.forEach(c => { if(c.lot === lotId && c.status === 'Pending') c.status = 'Cancelled'; }); }
+function genTopup(){
+  const a = Math.round(Number($('topAmt').value.replace(/[, ]/g,'')));
+  if(!a || a < 100000) { $('topErr').textContent = 'Enter at least TZS 100,000.'; return; }
+  const cn = newCn('Wallet top-up', a); toast(`Control number <b>${cn.no}</b> generated for ${fmt(a)}.`, 'good'); render();
+}
+function simulatePaid(no){
+  const cn = S.cns.find(c => c.no === no); if(!cn || cn.status !== 'Pending') return;
+  cn.status = 'Paid'; cn.paidAt = now();
+  if(cn.purpose === 'Wallet top-up'){ txnFor(cn.tin, 'CREDIT', '', cn.amount, 0, `Bank payment, control no. ${cn.no}`); toast(`Payment received: ${fmt(cn.amount)} credited to your wallet.`, 'good'); }
+  else { const lot = S.lots.find(l => l.id === cn.lot); markPaid(lot, 'Control no. ' + cn.no); }
+  render();
+}
+function markPaid(lot, how){ lot.status = 'paid'; lot.paidAt = now(); lot.removeBy = now() + REMOVE_DAYS*86400e3; lot.paidHow = how; cancelBalanceCns(lot.id);
+  lot.receiptNo = 'RCPT-' + new Date(now()).getFullYear() + '-' + String(Math.floor(Math.random()*1e6)).padStart(6,'0');
+  toast(`<b>${lot.id} fully paid.</b> Receipt ${lot.receiptNo} issued — remove goods within 3 days (R10).`, 'good'); }
+function showReceipt(lotId){
+  const l = S.lots.find(x => x.id === lotId), u = S.users[l.winnerTin] || S.user;
+  modal(`<div class="mhead"><h2>Official Payment Receipt</h2><button class="b-ghost" onclick="closeModal()">✕</button></div><div class="mbody"><div class="card" id="receipt">
+    <div class="row" style="justify-content:space-between"><b style="font-size:17px">Online Auction · Payment Receipt</b><span class="badge bg-green">FULLY PAID</span></div>
+    <table class="kv" style="margin-top:12px"><tr><td>Receipt no.</td><td><b>${l.receiptNo}</b></td></tr><tr><td>Date paid</td><td>${dt(l.paidAt)}</td></tr>
+    <tr><td>Bidder</td><td>${esc(u.name)} · TIN ${u.tin}</td></tr><tr><td>Lot</td><td>${l.id} — ${l.desc}</td></tr><tr><td>Location</td><td>${l.location}</td></tr>
+    <tr><td>Winning bid</td><td>${fmt(l.highest)}</td></tr><tr><td>Deposit applied (25%)</td><td>${fmt(l.deposit)}</td></tr><tr><td>Balance paid (75%)</td><td>${fmt(l.dueAmt)} via ${esc(l.paidHow)}</td></tr>
+    <tr><td>Remove goods by</td><td><b>${dt(l.removeBy)}</b> — rent applies after this date (R10)</td></tr></table>
+    <div class="callout" style="margin-top:12px">To collect the goods, present this receipt and a Passport, National ID or valid driving licence. A representative must also bring a power of attorney (T&C 15). Third-party claims are not entertained (T&C 16).</div></div>
+    <div class="row" style="justify-content:flex-end"><button class="b-ghost" onclick="window.print()">Print</button><button class="b-red" onclick="closeModal()">Close</button></div></div>`);
+}
+function cancelAuction(){
+  let n = 0;
+  S.lots.filter(l => l.status === 'live').forEach(l => {
+    Object.keys(S.accounts).forEach(t => { const a = S.accounts[t], h = a.holds[l.id] || 0; if(h){ txnFor(t, 'RELEASE', l.id, h, -h, 'Auction cancelled by Customs — hold released (R20)'); a.holds[l.id] = 0; } });
+    l.status = 'cancelled'; n++; });
+  if(!n) return toast('No open lots to cancel.', 'warn');
+  if(openId) openLot(openId);
+  toast(`Auction cancelled: ${n} open lots withdrawn and all holds released (R20). Won lots are unchanged pending a decision (question 45).`, 'warn'); render();
+}
+function confirmWalletPay(lotId){
+  const lot = S.lots.find(l => l.id === lotId);
+  if(S.wallet.available < lot.dueAmt) return toast(`Available balance ${fmt(S.wallet.available)} is not enough for ${fmt(lot.dueAmt)}. Top up or pay with a control number.`, 'bad');
+  modal(`<div class="mhead"><h2>Confirm payment</h2></div><div class="mbody">
+    <div class="callout warn">You are about to pay <b>${fmt(lot.dueAmt)}</b> (75% balance) for <b>${lot.id}</b> from your wallet's available balance.<br>This payment is not automatic and cannot be reversed (R8).</div>
+    <table class="kv"><tr><td>Winning bid</td><td>${fmt(lot.highest)}</td></tr><tr><td>Deposit already applied (25%)</td><td>${fmt(lot.deposit)}</td></tr><tr><td>Balance to pay now</td><td><b>${fmt(lot.dueAmt)}</b></td></tr><tr><td>Available after payment</td><td>${fmt(S.wallet.available - lot.dueAmt)}</td></tr></table>
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="b-ghost" onclick="closeModal()">Cancel</button><button class="b-blue" onclick="doWalletPay('${lot.id}')">Confirm and pay</button></div></div>`);
+}
+function doWalletPay(lotId){ const lot = S.lots.find(l => l.id === lotId); if(lot.status !== 'won') return closeModal();
+  txn('PAYMENT', lot.id, -lot.dueAmt, 0, '75% balance paid from wallet (confirmed by bidder)'); markPaid(lot, 'Wallet'); closeModal(); render(); }
+function cnForBalance(lotId){ const lot = S.lots.find(l => l.id === lotId); if(S.cns.some(c => c.lot === lotId && c.status === 'Pending')) return toast('A control number for this lot is already pending.', 'warn');
+  const cn = newCn('Balance (75%)', lot.dueAmt, lotId); toast(`Control number <b>${cn.no}</b> generated for ${fmt(lot.dueAmt)}.`, 'good'); render(); }
+function requestWithdraw(){
+  const a = Math.round(Number($('wdAmt').value.replace(/[, ]/g,'')));
+  if(!a || a <= 0) return $('wdErr').textContent = 'Enter an amount.';
+  if(a > S.wallet.available) return $('wdErr').textContent = `You can only withdraw your available balance (${fmt(S.wallet.available)}). Held amounts cannot be withdrawn (R12).`;
+  const w = {id:'WD' + String(S.withdrawals.length + 1).padStart(4,'0'), tin:curTin(), amount:a, account:S.user.bank, requested:now(), status:'Pending approval'};
+  S.withdrawals.unshift(w); txn('WITHDRAW', '', -a, 0, `Withdrawal ${w.id} requested to ${S.user.bank}`);
+  toast(`Withdrawal ${w.id} of ${fmt(a)} submitted. Waiting for Customs approval.`, 'good'); render();
+}
+function decideWithdraw(id, ok){ const w = S.withdrawals.find(x => x.id === id); if(w.status !== 'Pending approval') return;
+  w.status = ok ? 'Paid to bank' : 'Rejected'; w.decided = now();
+  if(!ok) txnFor(w.tin, 'REVERSAL', '', w.amount, 0, `Withdrawal ${w.id} rejected — amount returned`);
+  toast(`Withdrawal ${w.id} ${ok ? 'approved and paid' : 'rejected'}.`, ok ? 'good' : 'warn'); render(); }
+
+/* ---------- registration ---------- */
+function verifyTin(){
+  const tin = $('rTin').value.replace(/\D/g,''), email = $('rEmail').value.trim().toLowerCase(), rec = IDRAS[tin];
+  const fail = m => { $('rErr').textContent = m; };
+  if(!tin || !email) return fail('TIN and email are required.');
+  if(!rec) return fail('TIN not found in IDRAS.');
+  if(S.banned[tin]) return fail('This TIN is permanently banned from auctions (R9).');
+  if(rec.inactive) return fail('This TIN is not active in IDRAS. Contact the Help Desk.');
+  if(rec.staff) return fail('Revenue Authority officers are excluded from participating in the auction (R17).');
+  if(!rec.email) return fail('No email registered for this TIN. Update taxpayer profile in IDRAS or contact the Help Desk.');
+  if(rec.email !== email) return fail('Email does not match the email registered for this TIN in IDRAS.');
+  if(S.users[tin]) return fail('This TIN is already registered. Use Login.');
+  S.reg = {step:2, tin, email}; render();
+}
+function verifyOtp(){ if($('rOtp').value.trim() !== '123456') { $('rErr').textContent = 'Incorrect one-time code.'; return; } S.reg.step = 3; render(); }
+function finishReg(){
+  const bank = $('rBank').value.trim();
+  if(!bank) return $('rErr').textContent = 'Enter the bank account for refunds and withdrawals.';
+  const pno = $('rPermit').value.trim().toUpperCase();
+  if(pno && !PERMITS[pno]) return $('rErr').textContent = 'Permit number could not be verified with the regulator.';
+  if(!$('rTerms').checked) return $('rErr').textContent = 'Accept the auction and wallet terms to continue.';
+  const rec = IDRAS[S.reg.tin]; S.users[S.reg.tin] = {tin:S.reg.tin, name:rec.name, type:rec.type, email:S.reg.email, bank, permit:pno || null};
+  S.user = S.users[S.reg.tin]; S.reg = {step:1}; toast(`Welcome, ${esc(rec.name)}. Your wallet is ready — top up to start bidding.`, 'good'); go('wallet');
+}
+/* Demo login: any TIN + any password. An unknown TIN gets a demo business-TIN profile so the flow can be shown quickly. */
+function doLogin(){
+  const tin = $('lTin').value.replace(/\D/g,''), pw = $('lPw').value;
+  if(!tin) return $('lErr').textContent = 'Enter a TIN (digits).';
+  if(!pw) return $('lErr').textContent = 'Enter a password (any value works in this prototype).';
+  if(!S.users[tin]){
+    if(!IDRAS[tin]) IDRAS[tin] = {name:'Demo Bidder ' + tin, type:'Company', business:true, email:'bidder' + tin.slice(-4) + '@example.com', phone:'+255 7** *** ' + tin.slice(-3), demo:true};
+    const r = IDRAS[tin];
+    S.users[tin] = {tin, name:r.name, type:r.type, email:r.email || '—', bank:'Demo bank account ' + tin.slice(-4), permit:null};
+  }
+  S.user = S.users[tin];
+  const r = IDRAS[tin];
+  if(S.banned[tin]) toast('Logged in. This TIN is blacklisted — bidding is blocked.', 'bad');
+  else if(r.inactive || r.staff) toast('Logged in. Note: this TIN fails the auction eligibility checks, so bidding will be blocked.', 'warn');
+  else toast(`Logged in as ${esc(S.user.name)}. Pre-auction TIN check passed.`, 'good');
+  go('lots');
+}
+function logout(){ S.user = null; go('lots'); }
+
+/* ---------- views ---------- */
+const MENU = [
+  ['h4', 'Customs Warehouse'],
+  ['h5', 'Auction Goods'], ['lots', 'Auction Goods List'], ['terms', 'Auction Terms & Condition'], ['mybids', 'My Bids', 1],
+  ['h5', 'Bidder Wallet', 1], ['wallet', 'Wallet Dashboard'], ['topup', 'Top Up (Deposit)'], ['withdraw', 'Withdraw'], ['statement', 'Wallet Statement'],
+  ['h5', 'Customs Back Office', 1], ['admin', 'Wallet Monitoring'],
+];
+const PAGES = {
+  lots:['Auction Goods List','UI-CGME-0504-001Q','Cargo Mgmt. / Customs Warehouse / Auction Goods / Auction Goods List'],
+  terms:['Auction Terms & Condition','UI-CGME-0504-003Q','Cargo Mgmt. / Customs Warehouse / Auction Goods / Terms'],
+  mybids:['My Bids','UI-WLT-0105 · proposed','Cargo Mgmt. / Auction Goods / My Bids'],
+  wallet:['Wallet Dashboard','UI-WLT-0101 · proposed','Cargo Mgmt. / Bidder Wallet / Dashboard'],
+  topup:['Top Up (Deposit)','UI-WLT-0102 · proposed','Cargo Mgmt. / Bidder Wallet / Top Up'],
+  withdraw:['Withdraw','UI-WLT-0103 · proposed','Cargo Mgmt. / Bidder Wallet / Withdraw'],
+  statement:['Wallet Statement','UI-WLT-0104 · proposed','Cargo Mgmt. / Bidder Wallet / Statement'],
+  admin:['Wallet Monitoring','UI-WLT-0901 · proposed','Cargo Mgmt. / Customs Back Office / Wallet Monitoring'],
+  register:['Auction Bidder Registration','UI-PTLE-0210-004S','Portal / My Portal / User Registration Request / Auction Bidder'],
+  login:['Login','UI-PTLE-0001','Portal / Login'],
+};
+function go(p){ S.page = p; window.scrollTo(0,0); render(); }
+function render(){
+  $('menu').innerHTML = MENU.map(([k, t, n]) => k === 'h4' ? `<h4>${t}</h4>` : k === 'h5' ? `<h5>${t} ${n ? '<span class="new">NEW</span>' : ''}</h5>` : `<a class="${S.page === k ? 'active' : ''}" onclick="go('${k}')">${t} ${n ? '<span class="new">NEW</span>' : ''}</a>`).join('');
+  $('who').innerHTML = S.user
+    ? `<div style="font-weight:700">${esc(S.user.name)}</div><div style="font-size:12px;opacity:.85;margin:2px 0 10px">TIN ${S.user.tin} · ${S.user.type}</div>
+       <div style="font-size:12px;opacity:.85">Available</div><div style="font-size:18px;font-weight:700;margin-bottom:10px">${fmt(S.wallet.available)}</div>
+       ${isBanned() ? '<div class="badge bg-red" style="background:#fff;margin-bottom:10px">BANNED</div>' : ''}
+       <div class="btns"><button class="b-white" onclick="go('wallet')">My Wallet</button><button class="b-ghost" style="color:#fff;border-color:#fff" onclick="logout()">Logout</button></div>`
+    : `<div class="btns"><button class="b-white" onclick="go('login')">Login</button><button class="b-ghost" style="color:#fff;border-color:#fff" onclick="go('register')">User Registration</button></div>`;
+  const [title, ui, crumb] = PAGES[S.page];
+  const parts = crumb.split(' / ');
+  const needsUser = ['mybids','wallet','topup','withdraw','statement'].includes(S.page);
+  $('page').innerHTML = `<div class="head"><h1>${title} <span class="muted" style="font-weight:500;font-size:15px">(${ui})</span></h1><div class="crumb">${parts.slice(0,-1).join(' / ')} / <b>${parts.at(-1)}</b></div></div>`
+    + (needsUser && !S.user ? loginNeeded() : VIEWS[S.page]());
+  $('demoLot').innerHTML = S.lots.map(l => `<option value="${l.id}">${l.id} · ${l.status}</option>`).join('');
+  $('clock').textContent = 'Simulated clock: ' + dt(now()) + (S.offset ? ` (+${Math.round(S.offset/3600e3)} h)` : '');
+}
+const loginNeeded = () => `<div class="card"><div class="callout">Log in or register as an auction bidder to use this page.</div><div class="row"><button class="b-blue" onclick="go('login')">Login</button><button class="b-ghost" onclick="go('register')">User Registration</button></div></div>`;
+function statusBadge(l){
+  if(['won','paid','defaulted','sold'].includes(l.status) && l.myBid && !iWon(l)) return '<span class="badge bg-gray">Lost</span>';
+  const m = {live:['Bidding open','bg-blue'], won:['Won · awaiting payment','bg-amber'], paid:['Paid · release order','bg-green'], lost:['Lost','bg-gray'], sold:['Sold','bg-gray'], unsold:['Unsold','bg-gray'], defaulted:['Defaulted · re-offer','bg-red'], cancelled:['Cancelled by Customs','bg-red']}[l.status];
+  return `<span class="badge ${m[1]}">${m[0]}</span>`;
+}
+const truck = `<svg width="56" height="36" viewBox="0 0 56 36" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="32" height="20" rx="2"/><path d="M34 12h10l8 8v6H34z"/><circle cx="12" cy="29" r="4"/><circle cx="44" cy="29" r="4"/></svg>`;
+const VIEWS = {
+  lots(){
+    const cats = [...new Set(S.lots.map(l => l.cat))];
+    const list = S.lots.filter(l => !S.filter || l.cat === S.filter);
+    return `<div class="card"><div class="grid">
+        <div class="lbl">Year</div><div><input value="2026"></div><div class="lbl">Location</div><div><input placeholder="Search location"></div>
+        <div class="lbl">Region</div><div><select><option>Select</option><option>Dar es Salaam</option></select></div><div class="lbl">Categories</div><div><select onchange="S.filter=this.value;render()"><option value="">Select</option>${cats.map(c => `<option ${S.filter === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+      </div><div class="row" style="justify-content:space-between;margin-top:14px"><button class="b-yellow" onclick="S.filter='';render()">Reset</button><button class="b-blue">Search</button></div></div>
+      ${S.user ? `<div class="callout ${isBanned() ? 'bad' : 'good'}">${isBanned() ? 'Your TIN is <b>banned</b> from auctions. You can still withdraw your available balance.' : `Wallet available: <b>${fmt(S.wallet.available)}</b> · held: <b>${fmt(S.wallet.held)}</b>. Each bid holds 25% of the bid amount.`}</div>` : `<div class="callout warn">You can browse lots. To bid, <a onclick="go('register')">register</a> with a TIN and email that match IDRAS, then fund your wallet.</div>`}
+      <div class="card" style="padding:0;overflow:auto"><table><tr><th></th><th>Image</th><th>Auction LOTS No</th><th>Description of Goods</th><th>Location</th><th>Starting Price</th><th>Highest Bid</th><th>CountDown Time</th></tr>
+      ${list.map((l, i) => `<tr><td><b>${i+1}</b></td><td><div class="img">${truck}</div></td><td>${l.id}</td>
+        <td style="max-width:280px"><a onclick="openLot('${l.id}')">${l.desc}</a><div style="margin-top:12px"><button class="b-blue" onclick="openLot('${l.id}')">${l.status === 'live' ? 'View Details & Bid' : 'View Details'}</button></div></td>
+        <td>${l.location}${l.restricted ? '<div><span class="badge bg-amber">Restricted · permit needed</span></div>' : ''}${S.user && !eligibility(l).ok ? '<div style="margin-top:6px"><span class="badge bg-red">Not eligible</span></div>' : ''}</td><td class="price">${fmt(l.start)}</td>
+        <td>${l.highest ? `<b>${fmt(l.highest)}</b><div class="muted" style="font-size:12px">${l.highestBy === curTin() ? '<span class="badge bg-green">You are highest</span>' : esc(whoLabel(l.highestBy))}</div>` : '<span class="muted">No bids yet</span>'}</td>
+        <td>${l.status === 'live' ? `<div>Auction Ends In :</div><div class="cd" data-end="${l.endsAt}">${countdown(l.endsAt - now())}</div>` : statusBadge(l)}</td></tr>`).join('')}
+      </table></div>`;
+  },
+  terms(){
+    const R = [
+      ['R1','Only TIN holders (individuals and companies) may register. TIN and email must match IDRAS.'],
+      ['R2','TIN status is checked at registration and again before each auction.'],
+      ['R3','Each bid holds 25% of the bid amount from the wallet\'s available balance. A bid without enough balance is rejected.'],
+      ['R4','Each lot has its own hold. You may bid on several lots if your balance covers every hold.'],
+      ['R5','When you are outbid, your hold on that lot is released immediately.'],
+      ['R6','A new bid must be at least 1% and at most 20% above the current highest bid. The first bid must be at least the starting price.'],
+      ['R7','At close, the winner\'s 25% is applied to the price and becomes non-refundable. Losers\' holds are released.'],
+      ['R8','The winner pays the remaining 75% within 48 calendar hours, from the wallet (confirmed by the bidder) or by control number.'],
+      ['R9','If the 75% is not paid in time, the 25% is forfeited to Customs revenue, the TIN is permanently banned, and the lot is re-offered.'],
+      ['R10','Goods are released after full payment and must be removed within 3 days; rent runs from the sale date after that.'],
+      ['R12','Available balance earns no interest, never expires, and can be withdrawn. Held amounts cannot be withdrawn.'],
+      ['R13','Customs gives no warranty on quality, quantity or condition. Bidding means accepting the lot conditions.'],
+      ['R15','Non-business TIN holders may bid only on motor vehicles, tricycles, motorcycles and bicycles. Business TIN holders may bid on any goods.'],
+      ['R16','A defaulter is blacklisted and the TIN is deactivated for all TRA services.'],
+      ['R17','Revenue Authority officers may not bid.'],
+      ['R18','The owner of the goods may not bid on them, unless the sale is for unpaid domestic taxes.'],
+      ['R19','Chemicals and other restricted goods need a bidder registered with the accredited regulator.'],
+      ['R20','Customs may cancel an auction at any time; all holds are then released.'],
+      ['T&C 15','To collect goods: the payment receipt, a Passport, National ID or driving licence, and a power of attorney for a representative.'],
+      ['T&C 22','False information and non-payment are offences under the Economic and Organized Crime Control Act, Cap 200.'],
+    ];
+    return `<div class="card"><table><tr><th>#</th><th class="l">Condition</th></tr>${R.map(r => `<tr><td><b>${r[0]}</b></td><td class="l">${r[1]}</td></tr>`).join('')}</table></div>`;
+  },
+  register(){
+    const st = S.reg.step, sc = n => st > n ? 'done' : st === n ? 'on' : '';
+    const steps = `<div class="card"><div class="steps"><div class="step ${sc(1)}"><div class="dot">${st > 1 ? '✓' : 1}</div><b>Verify TIN</b><br><small>${st === 1 ? 'In progress' : 'Done'}</small></div><div class="bar"></div><div class="step ${sc(2)}"><div class="dot">${st > 2 ? '✓' : 2}</div><b>Verify OTP</b>${st === 2 ? '<br><small>In progress</small>' : ''}</div><div class="bar"></div><div class="step ${sc(3)}"><div class="dot">3</div><b>Auction Bidder</b>${st === 3 ? '<br><small>In progress</small>' : ''}</div></div></div>`;
+    let body;
+    if(st === 1) body = `<h2 style="margin-top:0">Verify TIN</h2><div class="grid"><div class="lbl">TIN <span style="color:var(--red)">*</span></div><div><input id="rTin" placeholder="e.g. 100200300"></div><div class="lbl">Email Address <span style="color:var(--red)">*</span></div><div style="flex-direction:column;align-items:stretch"><input id="rEmail" placeholder="Email registered in IDRAS"><div class="err" id="rErr"></div></div></div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="b-blue" onclick="verifyTin()">Verify</button></div>
+      <div class="callout" style="margin-top:16px"><div class="hint"><b>Demo IDRAS records</b><br>
+      <code>100200300</code> + <code>demo.bidder@example.com</code> → passes<br>
+      <code>100200301</code> + <code>asha.m@example.com</code> → passes (individual)<br>
+      <code>100200302</code> → no email registered in IDRAS<br>
+      <code>100200303</code> → TIN not active<br>
+      <code>100200304</code> + <code>j.officer@example.com</code> → Revenue Authority officer, excluded (R17)<br>
+      <code>100200999</code> → banned TIN (earlier default)<br>
+      Asha (non-business TIN) can bid only on vehicle lots, and is the owner of lot 0004 (R15, R18).</div></div>`;
+    else if(st === 2) body = `<h2 style="margin-top:0">Verify one-time code</h2><div class="callout good">TIN and email match IDRAS. A one-time code was sent to <b>${S.reg.email.replace(/^(.).*(@.*)$/, '$1***$2')}</b> and the phone registered in IDRAS. <span class="hint">(Demo code: <code>123456</code>)</span></div>
+      <div class="grid" style="grid-template-columns:160px 1fr"><div class="lbl">One-time code</div><div style="flex-direction:column;align-items:stretch"><input id="rOtp" maxlength="6"><div class="err" id="rErr"></div></div></div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="b-blue" onclick="verifyOtp()">Verify code</button></div>`;
+    else { const r = IDRAS[S.reg.tin];
+      body = `<h2 style="margin-top:0">Auction Bidder details</h2><table class="kv"><tr><td>TIN</td><td>${S.reg.tin}</td></tr><tr><td>Name (from IDRAS)</td><td>${esc(r.name)}</td></tr><tr><td>Taxpayer type</td><td>${r.type}</td></tr><tr><td>TIN category (from IDRAS)</td><td>${r.business ? 'Business TIN — may bid on all goods' : 'Non-business TIN — motor vehicles, tricycles, motorcycles and bicycles only (R15)'}</td></tr><tr><td>Email (from IDRAS)</td><td>${esc(S.reg.email)}</td></tr><tr><td>Phone (from IDRAS)</td><td>${r.phone}</td></tr>
+      <tr><td>Bank account for refunds <span style="color:var(--red)">*</span></td><td><input id="rBank" placeholder="Bank name and account number in the same name"></td></tr>
+      <tr><td>Regulator permit no. (optional)</td><td><input id="rPermit" placeholder="Only for chemicals and restricted goods (R19). Demo: PERMIT-001"></td></tr></table>
+      <div class="callout bad" style="margin-top:12px">Using another person's TIN or giving false information is an offence under the Economic and Organized Crime Control Act, Cap 200. A winner who does not pay within 48 hours is blacklisted and the TIN is deactivated for TRA services (T&C 2, 14, 22).</div>
+      <label class="row" style="margin-top:12px"><input type="checkbox" id="rTerms" style="width:auto"> I have read and accept the Online Auction Terms & Conditions and the wallet terms, including the 25% non-refundable deposit for winning bids.</label>
+      <div class="err" id="rErr"></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="b-blue" onclick="finishReg()">Complete registration</button></div>`; }
+    return steps + `<div class="card">${body}</div>`;
+  },
+  login(){
+    const regd = Object.keys(S.users);
+    return `<div class="card" style="max-width:560px"><div class="grid" style="grid-template-columns:160px 1fr"><div class="lbl">TIN</div><div><input id="lTin" placeholder="Registered TIN"></div><div class="lbl">Password</div><div><input type="password" id="lPw" placeholder="Any value in this prototype" onkeydown="if(event.key==='Enter')doLogin()"></div></div>
+      <div class="err" id="lErr"></div><div class="row" style="justify-content:space-between;margin-top:12px"><a onclick="go('register')">User Registration</a><button class="b-blue" onclick="doLogin()">Login</button></div>
+      <div class="callout" style="margin-top:12px"><div class="hint"><b>Demo login:</b> any TIN and any password works. A TIN not yet registered gets a demo business-TIN profile with an empty wallet.<br>Try <code>100200301</code> (non-business TIN, owner of lot 0004) or <code>100200304</code> (officer, blocked from bidding).${regd.length ? '<br>Already used in this demo: ' + regd.map(t => `<code>${t}</code>`).join(' ') : ''}</div></div></div>`;
+  },
+  wallet(){
+    const holds = S.lots.filter(l => holdOf(l.id) > 0);
+    const due = S.lots.filter(l => l.status === 'won');
+    return `${isBanned() ? `<div class="callout bad"><b>TIN banned:</b> ${esc(S.banned[S.user.tin])}. Bidding is blocked. You can still withdraw your available balance.</div>` : ''}
+      ${due.map(l => `<div class="callout warn"><b>Payment due:</b> ${fmt(l.dueAmt)} for ${l.id} · <span class="cd" style="font-size:15px" data-end="${l.dueAt}">${countdown(l.dueAt - now())}</span> left. <a onclick="go('mybids')">Pay now</a></div>`).join('')}
+      <div class="stats"><div class="stat"><small>Available balance</small><b>${fmt(S.wallet.available)}</b><div class="hint">Can bid or withdraw</div></div>
+      <div class="stat h"><small>Held for active bids</small><b>${fmt(S.wallet.held)}</b><div class="hint">25% of each leading bid</div></div>
+      <div class="stat t"><small>Total wallet balance</small><b>${fmt(S.wallet.available + S.wallet.held)}</b><div class="hint">Available + held</div></div></div>
+      <div class="row" style="margin-bottom:16px"><button class="b-blue" onclick="go('topup')">Top up</button><button class="b-ghost" onclick="go('withdraw')">Withdraw</button><button class="b-ghost" onclick="go('lots')">Go to auction lots</button></div>
+      <div class="card"><h3 style="margin-top:0">Active holds</h3>${holds.length ? `<table><tr><th>Lot</th><th>My bid</th><th>Held (25%)</th><th>Status</th></tr>${holds.map(l => `<tr><td>${l.id}</td><td>${fmt(l.myBid)}</td><td>${fmt(holdOf(l.id))}</td><td>${statusBadge(l)}</td></tr>`).join('')}</table>` : '<div class="muted">No active holds.</div>'}</div>
+      <div class="card"><h3 style="margin-top:0">Recent transactions</h3>${txnTable(S.txns.slice(0,6))}<div style="margin-top:10px"><a onclick="go('statement')">View full statement</a></div></div>`;
+  },
+  topup(){
+    return `<div class="card"><div class="grid" style="grid-template-columns:200px 1fr"><div class="lbl">Amount (TZS)</div><div style="flex-direction:column;align-items:stretch"><input id="topAmt" placeholder="e.g. 20,000,000"><div class="err" id="topErr"></div></div></div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="b-blue" onclick="genTopup()">Generate control number</button></div>
+      <div class="hint" style="margin-top:8px">Pay the control number at any partner bank, mobile money or the payment gateway. The wallet is credited when the bank confirms the payment.</div></div>
+      ${cnTable()}`;
+  },
+  withdraw(){
+    return `<div class="card"><div class="stats" style="margin-bottom:12px"><div class="stat"><small>Available to withdraw</small><b>${fmt(S.wallet.available)}</b></div><div class="stat h"><small>Held (cannot withdraw)</small><b>${fmt(S.wallet.held)}</b></div></div>
+      <div class="grid" style="grid-template-columns:200px 1fr"><div class="lbl">Amount (TZS)</div><div style="flex-direction:column;align-items:stretch"><input id="wdAmt"><div class="err" id="wdErr"></div></div><div class="lbl">Pay to</div><div>${esc(S.user.bank)} <span class="muted">&nbsp;(registered account only)</span></div></div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="b-blue" onclick="requestWithdraw()">Request withdrawal</button></div></div>
+      <div class="card"><h3 style="margin-top:0">My withdrawals</h3>${wdTable(false)}</div>`;
+  },
+  statement(){ return `<div class="card" style="overflow:auto">${txnTable(S.txns)}</div>`; },
+  mybids(){
+    const mine = S.lots.filter(l => l.myBid);
+    if(!mine.length) return `<div class="card muted">You have not bid on any lot yet. <a onclick="go('lots')">Browse lots</a></div>`;
+    return `<div class="card" style="padding:0;overflow:auto"><table><tr><th>Lot</th><th>My last bid</th><th>Highest bid</th><th>Status</th><th>Next step</th></tr>
+      ${mine.map(l => `<tr><td>${l.id}<div class="hint">${l.desc}</div></td><td>${fmt(l.myBid)}</td><td>${fmt(l.highest)}</td><td>${statusBadge(l)}</td><td>${nextStep(l)}</td></tr>`).join('')}</table></div>`;
+  },
+  admin(){
+    const accts = Object.entries(S.accounts).filter(([t]) => t !== '_guest');
+    const sumA = accts.reduce((s, [, a]) => s + a.available, 0), sumH = accts.reduce((s, [, a]) => s + a.held, 0), tot = sumA + sumH;
+    const ledger = accts.flatMap(([, a]) => a.txns).sort((x, y) => y.id.localeCompare(x.id));
+    return `<div class="callout">Back-office view for Customs Auction Unit and Finance. In the real system this lists every bidder's wallet.</div>
+      <div class="stats"><div class="stat t"><small>Total wallet balances</small><b>${fmt(tot)}</b></div><div class="stat h"><small>Held for active bids</small><b>${fmt(sumH)}</b></div>
+      <div class="stat"><small>Deposits applied (awaiting balance)</small><b>${fmt(S.applied)}</b></div><div class="stat r"><small>Forfeited to Customs revenue</small><b>${fmt(S.revenue)}</b></div></div>
+      <div class="card"><h3 style="margin-top:0">Withdrawals awaiting approval (maker-checker)</h3>${wdTable(true)}</div>
+      <div class="card"><h3 style="margin-top:0">Banned TINs</h3><table><tr><th>TIN</th><th class="l">Reason</th></tr>${Object.entries(S.banned).map(([t, r]) => `<tr><td>${t}</td><td class="l">${esc(r)}</td></tr>`).join('')}</table></div>
+      <div class="card"><h3 style="margin-top:0">Lot settlement</h3><table><tr><th>Lot</th><th>Status</th><th>Winning bid</th><th>Deposit</th><th>Balance</th><th>Deadline</th></tr>${S.lots.filter(l => l.status !== 'live').map(l => `<tr><td>${l.id}</td><td>${statusBadge(l)}</td><td>${l.highest ? fmt(l.highest) : '—'}</td><td>${l.deposit ? fmt(l.deposit) : '—'}</td><td>${l.dueAmt ? fmt(l.dueAmt) : '—'}</td><td>${l.status === 'won' ? dt(l.dueAt) : l.status === 'paid' ? 'Remove by ' + dt(l.removeBy) : '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No closed lots yet.</td></tr>'}</table></div>
+      <div class="card" style="overflow:auto"><h3 style="margin-top:0">Bidder wallets</h3>${accts.length ? `<table><tr><th>TIN</th><th>Name</th><th>Available</th><th>Held</th><th>Status</th></tr>${accts.map(([t, a]) => `<tr><td>${t}</td><td>${esc(S.users[t] ? S.users[t].name : '—')}</td><td>${fmt(a.available)}</td><td>${fmt(a.held)}</td><td>${S.banned[t] ? '<span class="badge bg-red">Blacklisted</span>' : '<span class="badge bg-green">Active</span>'}</td></tr>`).join('')}</table>` : '<div class="muted">No bidder wallets yet.</div>'}</div>
+      <div class="card" style="overflow:auto"><h3 style="margin-top:0">Wallet ledger (audit trail, all bidders)</h3>${txnTable(ledger, true)}</div>`;
+  },
+};
+function nextStep(l){
+  if(l.status === 'live') return l.highestBy === curTin() ? 'Leading — wait for close' : `<button class="b-blue" onclick="openLot('${l.id}')">Bid again</button>`;
+  if(l.status === 'cancelled') return 'Auction cancelled — hold released.';
+  if(!iWon(l)) return 'Not won — hold released.';
+  if(l.status === 'won'){ const cn = S.cns.find(c => c.lot === l.id && c.status === 'Pending');
+    return `<div>Pay <b>${fmt(l.dueAmt)}</b> within <span class="cd" style="font-size:14px" data-end="${l.dueAt}">${countdown(l.dueAt - now())}</span></div><div class="row" style="justify-content:center;margin-top:8px"><button class="b-blue" onclick="confirmWalletPay('${l.id}')">Pay from wallet</button>${cn ? `<span class="hint">Control no. <b>${cn.no}</b> <a onclick="simulatePaid('${cn.no}')">simulate bank payment</a></span>` : `<button class="b-ghost" onclick="cnForBalance('${l.id}')">Get control number</button>`}</div>`; }
+  if(l.status === 'paid') return `Paid via ${esc(l.paidHow)}. Remove goods by <b>${dt(l.removeBy)}</b>.<div style="margin-top:8px"><button class="b-blue" onclick="showReceipt('${l.id}')">View receipt</button></div>`;
+  if(l.status === 'cancelled') return 'Auction cancelled — hold released.';
+  if(l.status === 'defaulted') return 'Deposit forfeited. TIN banned. Lot re-offered.';
+  return '—';
+}
+function txnTable(rows, admin){
+  if(!rows.length) return '<div class="muted">No transactions yet.</div>';
+  const sign = n => n === 0 ? '—' : (n > 0 ? '+' : '−') + Math.abs(n).toLocaleString('en-US');
+  const tcol = {CREDIT:'bg-green', HOLD:'bg-amber', RELEASE:'bg-blue', APPLY:'bg-amber', PAYMENT:'bg-blue', FORFEIT:'bg-red', WITHDRAW:'bg-gray', REVERSAL:'bg-green'};
+  return `<table><tr><th>Ref</th><th>Date</th>${admin ? '<th>TIN</th>' : ''}<th>Type</th><th>Lot</th><th>Available Δ</th><th>Held Δ</th><th>Available after</th><th>Held after</th><th class="l">Note</th></tr>
+    ${rows.map(t => `<tr><td>${t.id}</td><td style="white-space:nowrap">${dt(t.time)}</td>${admin ? `<td>${t.tin}</td>` : ''}<td><span class="badge ${tcol[t.type]}">${t.type}</span></td><td>${t.lot || '—'}</td><td>${sign(t.availDelta)}</td><td>${sign(t.heldDelta)}</td><td>${t.avail.toLocaleString('en-US')}</td><td>${t.held.toLocaleString('en-US')}</td><td class="l">${t.note}</td></tr>`).join('')}</table>`;
+}
+function cnTable(){
+  if(!S.cns.length) return '';
+  return `<div class="card"><h3 style="margin-top:0">Control numbers</h3><table><tr><th>Control no.</th><th>Purpose</th><th>Amount</th><th>Expires</th><th>Status</th><th></th></tr>
+    ${S.cns.map(c => `<tr><td><b>${c.no}</b></td><td>${c.purpose}${c.lot ? ' · ' + c.lot : ''}</td><td>${fmt(c.amount)}</td><td>${dt(c.expires)}</td><td><span class="badge ${c.status === 'Paid' ? 'bg-green' : c.status === 'Pending' ? 'bg-amber' : 'bg-gray'}">${c.status}</span></td><td>${c.status === 'Pending' ? `<button class="b-ghost" onclick="simulatePaid('${c.no}')">Simulate bank payment</button>` : ''}</td></tr>`).join('')}</table></div>`;
+}
+function wdTable(admin){
+  const rows = admin ? S.withdrawals : S.withdrawals;
+  if(!rows.length) return '<div class="muted">No withdrawals.</div>';
+  return `<table><tr><th>Ref</th><th>Amount</th><th>To account</th><th>Requested</th><th>Status</th>${admin ? '<th>Checker action</th>' : ''}</tr>
+    ${rows.map(w => `<tr><td>${w.id}</td><td>${fmt(w.amount)}</td><td>${esc(w.account)}</td><td>${dt(w.requested)}</td><td><span class="badge ${w.status === 'Paid to bank' ? 'bg-green' : w.status === 'Rejected' ? 'bg-red' : 'bg-amber'}">${w.status}</span></td>${admin ? `<td>${w.status === 'Pending approval' ? `<button class="b-green" onclick="decideWithdraw('${w.id}',true)">Approve</button> <button class="b-red" onclick="decideWithdraw('${w.id}',false)">Reject</button>` : '—'}</td>` : ''}</tr>`).join('')}</table>`;
+}
+
+/* ---------- lot modal ---------- */
+let openId = null;
+function modal(html){ $('mbox').innerHTML = html; $('modal').classList.add('show'); }
+function closeModal(){ $('modal').classList.remove('show'); openId = null; }
+function refreshOpenLot(id){ if(openId === id) openLot(id); }
+function openLot(id){
+  const l = S.lots.find(x => x.id === id);
+  const keep = $('bidAmt') && openId === id ? $('bidAmt').value : '';
+  openId = id;
+  const r = bidRange(l), myHold = holdOf(l.id);
+  let panel;
+  if(l.status !== 'live') panel = `<div class="callout">${statusBadge(l)}&nbsp; Bidding is closed for this lot.</div>${l.myBid ? `<div style="margin-top:8px">${nextStep(l)}</div>` : ''}`;
+  else if(!S.user) panel = `<div class="callout warn">Log in or <a onclick="closeModal();go('register')">register</a> to bid on this lot.</div>`;
+  else if(isBanned()) panel = `<div class="callout bad">Your TIN is banned from auctions. Bidding is blocked.</div>`;
+  else if(!eligibility(l).ok) panel = `<div class="callout bad"><b>Not eligible for this lot.</b><br>${eligibility(l).reason}</div>`;
+  else panel = `${eligibility(l).note ? `<div class="callout">${eligibility(l).note}</div>` : ''}${l.restricted ? `<div class="callout good">Restricted goods: your permit ${esc(S.user.permit)} is verified (R19).</div>` : ''}<table class="kv">
+      <tr><td>Current highest bid</td><td>${l.highest ? fmt(l.highest) + (l.highestBy === curTin() ? ' <span class="badge bg-green">You</span>' : ' · ' + esc(whoLabel(l.highestBy))) : 'No bids — first bid must be at least the starting price'}</td></tr>
+      <tr><td>Allowed range for next bid</td><td><b>${fmt(r.min)}</b>${r.max ? ' to <b>' + fmt(r.max) + '</b>' : ' or more'}</td></tr>
+      <tr><td>Your hold on this lot</td><td>${fmt(myHold)}</td></tr>
+      <tr><td>Your available balance</td><td>${fmt(S.wallet.available)}</td></tr>
+      <tr><td>Your bid (TZS)</td><td><input id="bidAmt" value="${keep}" oninput="bidPreview('${l.id}')" placeholder="${r.min.toLocaleString('en-US')}"><div class="hint" id="bidPrev"></div></td></tr></table>
+      <label class="row" style="margin-top:10px"><input type="checkbox" id="accept" style="width:auto" ${l.accepted ? 'checked' : ''}> I accept the conditions for this lot. Customs gives no warranty on quality, quantity or condition (R13).</label>
+      <div class="err" id="bidErr"></div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="b-blue" onclick="placeBid('${l.id}')" ${l.highestBy === curTin() ? 'disabled' : ''}>${l.highestBy === curTin() ? 'You are the highest bidder' : 'Place bid'}</button></div>`;
+  modal(`<div class="mhead"><h2>Auction Goods Details (UI-CGME-0504-002Q)</h2><button class="b-ghost" onclick="closeModal()">✕</button></div><div class="mbody">
+    <div class="two"><div class="card" style="margin:0"><table class="kv">
+      <tr><td>Auction LOTS No./Times</td><td>${l.id} / 1</td></tr>${l.fuel ? `<tr><td>Fuel Type</td><td>${l.fuel}</td></tr>` : ''}${l.trans ? `<tr><td>Transmission Type</td><td>${l.trans}</td></tr>` : ''}
+      <tr><td>Description of Goods</td><td>${l.desc}</td></tr><tr><td>Category</td><td>${l.cat}</td></tr><tr><td>Weight</td><td>${l.weight}</td></tr>
+      <tr><td>Location</td><td>${l.location}</td></tr><tr><td>Starting Price</td><td>${fmt(l.start)}</td></tr>
+      <tr><td>Bidding closes</td><td>${dt(l.endsAt)}${l.status === 'live' ? `<div class="cd" style="font-size:15px" data-end="${l.endsAt}">${countdown(l.endsAt - now())}</div>` : ''}</td></tr></table></div>
+    <div class="card" style="margin:0"><h3 style="margin-top:0">Bid with your wallet <span class="new">NEW</span></h3>${panel}</div></div>
+    <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Bid history</h3>${l.bids.length ? `<table><tr><th>Time</th><th>Bidder</th><th>Amount</th></tr>${l.bids.slice(0,8).map(b => `<tr><td>${dt(b.t)}</td><td>${esc(whoLabel(b.who))}</td><td>${fmt(b.amt)}</td></tr>`).join('')}</table>` : '<div class="muted">No bids yet.</div>'}</div>
+    <div class="row" style="justify-content:flex-end"><button class="b-red" onclick="closeModal()">Close</button></div></div>`);
+  if(keep) bidPreview(id);
+}
+function bidPreview(id){
+  const l = S.lots.find(x => x.id === id), a = Math.round(Number($('bidAmt').value.replace(/[, ]/g,''))), p = $('bidPrev');
+  if(!a){ p.textContent = ''; return; }
+  const need = Math.ceil(a*HOLD) - holdOf(id);
+  p.innerHTML = `Hold for this bid: <b>${fmt(Math.ceil(a*HOLD))}</b> (25%) · extra needed now: <b>${fmt(Math.max(0, need))}</b> · if you win, pay <b>${fmt(a - Math.ceil(a*HOLD))}</b> within 48 h`;
+}
+$('modal').addEventListener('click', e => { if(e.target.id === 'modal') closeModal(); });
+
+/* ---------- demo controls ---------- */
+const demoLotObj = () => S.lots.find(l => l.id === $('demoLot').value);
+function demoCompetitor(){ const l = demoLotObj(); if(l.status !== 'live') return toast('That lot is closed.', 'warn'); competitorBid(l, false); }
+function demoClose(){ const l = demoLotObj(); if(l.status !== 'live') return toast('That lot is already closed.', 'warn'); l.endsAt = now(); closeLot(l); render(); }
+function advanceClock(ms){ S.offset += ms; checkTimers(); toast(`Clock moved forward ${Math.round(ms/3600e3)} hours.`); if(openId) openLot(openId); render(); }
+function demoDeregister(){ if(!S.user) return toast('Log in first.', 'warn'); IDRAS[S.user.tin].inactive = !IDRAS[S.user.tin].inactive; toast(IDRAS[S.user.tin].inactive ? 'Your TIN is now inactive in IDRAS. The pre-auction TIN check will block bids.' : 'Your TIN is active again.', 'warn'); render(); }
+function resetDemo(){ Object.keys(IDRAS).forEach(k => { if(IDRAS[k].demo) delete IDRAS[k]; else if(IDRAS[k].name !== 'Old Harbour Traders') delete IDRAS[k].inactive; }); S = fresh(); S.lots = seedLots(); closeModal(); toast('Demo reset.'); render(); }
+function toggleTheme(){ const r = document.documentElement, l = r.dataset.theme === 'light'; r.dataset.theme = l ? '' : 'light'; $('themeBtn').textContent = l ? 'Light' : 'Dark'; }
+
+setInterval(() => {
+  const before = S.lots.map(l => l.status).join();
+  checkTimers();
+  if(S.lots.map(l => l.status).join() !== before){ render(); if(openId) openLot(openId); return; }
+  document.querySelectorAll('[data-end]').forEach(e => { e.textContent = countdown(Number(e.dataset.end) - now()); });
+  $('clock').textContent = 'Simulated clock: ' + dt(now()) + (S.offset ? ` (+${Math.round(S.offset/3600e3)} h)` : '');
+}, 1000);
+render();
+</script>
+</body>
+</html>
